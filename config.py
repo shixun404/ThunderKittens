@@ -17,7 +17,7 @@ sources = {
             ],
             '4090': [ 
                 'kernels/based/lin_attn_4090.cu',
-            ]
+            ] 
         }
     },
     'cylon': {
