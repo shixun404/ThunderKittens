@@ -171,46 +171,6 @@ def export_csv_and_plots(records: list, outdir: Path, prefix: str):
     sum_csv = outdir / f"{prefix}_summary.csv"
     summ.to_csv(sum_csv, index=False)
 
-    # 画图：每个 shape 两张图（ms / tflops）
-    shapes = summ[["M", "K", "N", "world_size"]].drop_duplicates().to_dict("records")
-    for s in shapes:
-        M, K, N, ws = s["M"], s["K"], s["N"], s["world_size"]
-        sub = summ[(summ["M"] == M) & (summ["K"] == K) & (summ["N"] == N) & (summ["world_size"] == ws)].copy()
-        sub = sub.sort_values(["num_comm_sms", "impl"])
-        shape_tag = f"M{M}_K{K}_N{N}_ws{ws}"
-
-        # TFLOPS
-        plt.figure()
-        for impl in sorted(sub["impl"].unique()):
-            s2 = sub[sub["impl"] == impl].sort_values("num_comm_sms")
-            plt.plot(s2["num_comm_sms"], s2["tflops_mean"], marker="o", label=impl)
-        plt.xlabel("num_comm_sms")
-        plt.ylabel("Mean TFLOp/s (across ranks)")
-        plt.title(f"BF16 AllGather+Matmul | {shape_tag} | TFLOp/s vs num_comm_sms")
-        plt.grid(True, linestyle="--", linewidth=0.5)
-        plt.legend()
-        plt.tight_layout()
-        plt.savefig(outdir / f"{prefix}_{shape_tag}_tflops.png", dpi=200)
-        plt.close()
-
-        # MS
-        plt.figure()
-        for impl in sorted(sub["impl"].unique()):
-            s2 = sub[sub["impl"] == impl].sort_values("num_comm_sms")
-            plt.plot(s2["num_comm_sms"], s2["ms_mean"], marker="o", label=impl)
-        plt.xlabel("num_comm_sms")
-        plt.ylabel("Mean latency (ms, across ranks)")
-        plt.title(f"BF16 AllGather+Matmul | {shape_tag} | Latency vs num_comm_sms")
-        plt.grid(True, linestyle="--", linewidth=0.5)
-        plt.legend()
-        plt.tight_layout()
-        plt.savefig(outdir / f"{prefix}_{shape_tag}_ms.png", dpi=200)
-        plt.close()
-
-    print(f"[rank0] wrote: {raw_csv}")
-    print(f"[rank0] wrote: {sum_csv}")
-    print(f"[rank0] plots in: {outdir}")
-
 
 if __name__ == "__main__":
 
