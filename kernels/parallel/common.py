@@ -15,14 +15,15 @@ def init_distributed_environment():
     world_size = int(os.environ.get("WORLD_SIZE", 1))
     assert world_size == local_world_size, "multi-node runs are not supported"
     assert rank == local_rank, "multi-node runs are not supported"
+    device = torch.device(f"cuda:{local_rank}")
+
     torch.distributed.init_process_group(
         backend="nccl",
-        device_id=local_rank,
+        device_id=device,
         rank=rank,
         world_size=world_size
     )
 
-    device = torch.device(f"cuda:{local_rank}")
     torch.cuda.set_device(device)
     torch.random.manual_seed(local_rank)
 

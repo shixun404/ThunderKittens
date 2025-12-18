@@ -32,7 +32,7 @@ NVCCFLAGS += $(PYTHON_INCLUDES) $(PYTORCH_INCLUDES) $(PYBIND_INCLUDES)
 NVCCFLAGS += ${PYTHON_LIBDIR} ${PYTORCH_LIBDIR} -lpython${PYTHON_VERSION}
 NVCCFLAGS += -ltorch_python -ltorch_cuda -ltorch_cpu -ltorch -lc10_cuda -lc10
 NVCCFLAGS += -diag-suppress 3189
-NVCCFLAGS += -shared -fPIC
+NVCCFLAGS += -shared -fPIC -D_GLIBCXX_USE_CXX11_ABI=0
 NVCCFLAGS += -DTORCH_EXTENSION_NAME=_C
 
 # Expect the including Makefile to set SRC and GPU
