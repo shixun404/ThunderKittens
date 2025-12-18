@@ -96,7 +96,7 @@ def main():
         plt.xlabel("Problem Size (N)")
         plt.ylabel(ylabel)
         plt.title(
-            f"AG+GEMM,  {ylabel} vs Problem Size"
+            f"GEMM+AR, {ylabel} vs Problem Size"
         )
         plt.legend()
         plt.grid(axis="y", linestyle="--", alpha=0.5)
