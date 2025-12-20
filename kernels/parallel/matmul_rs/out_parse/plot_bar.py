@@ -26,7 +26,7 @@ def main():
     print(df)
 
     metric_col = "tflops_mean" if args.metric == "tflops" else "ms_mean"
-    ylabel = "Mean TFLOp/s" if args.metric == "tflops" else "Mean Latency (ms)"
+    ylabel = "Mean TFLOP/s" if args.metric == "tflops" else "Mean Latency (ms)"
     
 
     impls = ["NCCL", "Triton-dist",  "PK"]
@@ -79,14 +79,14 @@ def main():
             plt.text(
                 x_pos,
                 y_val,
-                f"{y_val:.2f}",
+                f"{int(y_val)}",
                 ha="center",
                 va="bottom",
                 fontsize=9
             )
 
     plt.xticks(list(x), [str(s) for s in sizes])
-    plt.xlabel("Problem Size (N)")
+    plt.xlabel("Matrix Size, M=N=K")
     plt.ylabel(ylabel)
     plt.title(
         f"GEMM + RS, {ylabel} vs Problem Size"
