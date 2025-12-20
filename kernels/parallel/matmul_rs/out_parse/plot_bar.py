@@ -89,7 +89,7 @@ def main():
     plt.xlabel("Matrix Size, M=N=K")
     plt.ylabel(ylabel)
     plt.title(
-        f"GEMM + RS, {ylabel} vs Problem Size"
+        f"GEMM + RS, TFLOPS vs Problem Size"
     )
     plt.legend()
     plt.grid(axis="y", linestyle="--", alpha=0.5)
