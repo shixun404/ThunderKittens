@@ -23,7 +23,7 @@ def main():
     args = parser.parse_args()
 
     df = pd.read_csv(args.csv)
-    print(df)
+    # print(df)
 
     metric_col = "tflops_mean" if args.metric == "tflops" else "ms_mean"
     ylabel = "Mean TFLOP/s" if args.metric == "tflops" else "Mean Latency (ms)"
