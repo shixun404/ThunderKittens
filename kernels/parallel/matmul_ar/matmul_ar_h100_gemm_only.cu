@@ -220,8 +220,8 @@ void entrypoint(
         .C = kittens::py::parallel_tensor_to_pgl<globals::C_pgl>(C),
         .barrier = kittens::py::parallel_tensor_to_pgl<globals::barrier_pgl>(barrier),
         .dev_idx = barrier.local_rank_,
-        .num_comm_sms = num_comm_sms,
-        .num_comp_sms = config::NUM_BLOCKS - num_comm_sms
+        // .num_comm_sms = num_comm_sms,
+        .num_comp_sms = config::NUM_BLOCKS
     };
     kittens::py::launch_kernel<config, globals, main_kernel>(G);
     // kittens::py::launch_kernel<config, globals, epilogue_kernel>(G);
