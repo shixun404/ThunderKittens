@@ -178,14 +178,14 @@ if __name__ == "__main__":
     parser.add_argument("--outdir", type=str, default="out_parse", help="where to write csv/png (rank0 only)")
     parser.add_argument("--prefix", type=str, default="tp_matmul", help="file prefix")
     parser.add_argument("--warmup", type=int, default=10)
-    parser.add_argument("--iters", type=int, default=100)
+    parser.add_argument("--iters", type=int, default=50)
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--profile", action="store_true")
     # 允许你从命令行覆盖 sweep
     # parser.add_argument("--Ns", type=str, default="2048,4096,8192,16384,32768")
-    # parser.add_argument("--comm_sms", type=str, default="1,2,4,8,16,32,64")
-    parser.add_argument("--Ns", type=str, default="8192")
-    parser.add_argument("--comm_sms", type=str, default="16")
+    parser.add_argument("--comm_sms", type=str, default="1,2,4,8,16,32,64")
+    parser.add_argument("--Ns", type=str, default="32768")
+    # parser.add_argument("--comm_sms", type=str, default="16")
     # parser.add_argument("--comm_sms", type=str, default="1,2,4,8,16,32,64")
     args = parser.parse_args()
 
