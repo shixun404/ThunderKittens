@@ -47,8 +47,8 @@ def run(
     num_comm_sms: int,
     local_rank: int,
     local_world_size: int,
-    num_warmup_iters: int = 1,
-    num_iters: int = 5,
+    num_warmup_iters: int = 10,
+    num_iters: int = 50,
     check_correctness: bool = False,
     do_profile: bool = False,
     record_list_rank0: list | None = None, 
@@ -182,9 +182,9 @@ if __name__ == "__main__":
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--profile", action="store_true")
     # 允许你从命令行覆盖 sweep
-    # parser.add_argument("--Ns", type=str, default="2048,4096,8192,16384,32768")
+    parser.add_argument("--Ns", type=str, default="2048,4096,8192,16384,32768")
     parser.add_argument("--comm_sms", type=str, default="1,2,4,8,16,32,64")
-    parser.add_argument("--Ns", type=str, default="32768")
+    # parser.add_argument("--Ns", type=str, default="32768")
     # parser.add_argument("--comm_sms", type=str, default="16")
     # parser.add_argument("--comm_sms", type=str, default="1,2,4,8,16,32,64")
     args = parser.parse_args()
