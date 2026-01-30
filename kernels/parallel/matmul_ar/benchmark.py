@@ -179,7 +179,7 @@ if __name__ == "__main__":
     # 允许你从命令行覆盖 sweep
     # parser.add_argument("--Ns", type=str, default="2048,4096,8192,16384,32768")
     # parser.add_argument("--comm_sms", type=str, default="1,2,4,8,16,32,64")
-    parser.add_argument("--Ns", type=str, default="2048,4096,8192,16384,32768")
+    parser.add_argument("--Ns", type=str, default="32768")
     parser.add_argument("--comm_sms", type=str, default="0")
     args = parser.parse_args()
 
@@ -193,6 +193,10 @@ if __name__ == "__main__":
     for N in Ns:
         for num_comm_sms in comm_sms_list:
             run(N, N // local_world_size, N, num_comm_sms, 
+                local_rank, local_world_size, 
+                check_correctness=False, do_profile=False,
+                record_list_rank0=records_rank0)
+            run(N, N, N // local_world_size, num_comm_sms, 
                 local_rank, local_world_size, 
                 check_correctness=False, do_profile=False,
                 record_list_rank0=records_rank0)
