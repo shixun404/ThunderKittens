@@ -67,11 +67,8 @@ ncu: $(OUT)
 nsys: $(OUT)
 	env OMP_NUM_THREADS=1 torchrun --standalone --nproc_per_node=8 --no-python nsys profile \
 		--stats=true \
-		--trace cuda,osrt,nvtx,python-gil,syscall \
-		--gpu-metrics-devices=all \
-		--cuda-memory-usage true \
+		--trace cuda,nvtx,nccl \
 		--force-overwrite=true \
-		-o ./$(basename $(SRC)).nsys-rep \
 		python3 $(SCRIPT)
 
 $(OUT): $(SRC)
