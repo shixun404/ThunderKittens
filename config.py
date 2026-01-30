@@ -8,7 +8,7 @@ sources = {
     'hedgehog': {
         'source_files': {
             'h100': 'kernels/hedgehog/hh.cu'
-        }
+        } 
     },
     'based': {
         'source_files': {
