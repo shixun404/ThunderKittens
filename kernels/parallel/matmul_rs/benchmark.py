@@ -47,8 +47,8 @@ def run(
     N: int,
     local_rank: int,
     local_world_size: int,
-    num_warmup_iters: int = 1,
-    num_iters: int = 5,
+    num_warmup_iters: int = 10,
+    num_iters: int = 50,
     check_correctness: bool = False,
     do_profile: bool = False,
     record_list_rank0: list | None = None, 
@@ -177,8 +177,8 @@ if __name__ == "__main__":
     local_rank, local_world_size = init_distributed_environment()
     records_rank0 = [] if local_rank == 0 else None
 
-    # for N in [2048, 4096, 8192, 16384, 32768]:
-    for N in [2048,4096]:
+    for N in [2048, 4096, 8192, 16384, 32768]:
+    # for N in [32768]:
         run(N, N // local_world_size, N,
             local_rank, local_world_size, 
             check_correctness=False, do_profile=False,
