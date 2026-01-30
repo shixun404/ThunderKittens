@@ -29,15 +29,15 @@ def main():
     ylabel = "Mean TFLOp/s" if args.metric == "tflops" else "Mean Latency (ms)"
     
 
-    impls = ["NCCL", "PK", "Triton-dist"]
-    
+    impls = ["NCCL", "Triton-dist",  "PK"]
+
     orange = "#F29441"
     purple = "#9467BD"
     green = "#4EAE4E"
     green_blue = "#67BBBD"
     red = "#E67C7C"
 
-    colors = {"NCCL": purple, "PK":green, "Triton-dist":orange}
+    colors = {"NCCL": purple,  "Triton-dist":orange, "PK":green,}
 
 
     if df.empty:
@@ -54,7 +54,7 @@ def main():
     print(sizes, df)
 
     # bar 布局
-    bar_width = 0.35
+    bar_width = 0.8 / len(impls)
     x = range(len(sizes))
 
     plt.figure(figsize=(10, 3))
