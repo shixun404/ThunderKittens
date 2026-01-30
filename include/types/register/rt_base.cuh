@@ -69,7 +69,7 @@ template<typename _T, ducks::rt_layout::all _layout> struct rt_base {
     static constexpr int rows                 = tile_size_row; ///< Number of rows.
     static constexpr int cols                 = tile_size_col; ///< Number of cols.
     static constexpr int num_elements         = rows*cols; // 256 (64 for fp8e4m3)
-    static constexpr int elements_per_thread  = num_elements / 32; // 8 (2 for fp8e4m3)
+    static constexpr int elements_per_thread  = num_elements / 32; // 8 (2 for fp8e4m3) 
 
     static constexpr int packed_per_thread    = (elements_per_thread / base_types::packing<dtype>::num()) ; // 4
     static constexpr int registers_per_thread = packed_per_thread * sizeof(dtype) / 4; // 4 or 8, registers are 32-bit words
