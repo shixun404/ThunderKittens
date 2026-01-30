@@ -54,7 +54,7 @@ def main():
 
     # 定义 problem size（你这里是 cubic：M=K=N*world_size）
     # 横轴直接用 logical N（输出矩阵列数）
-    df["problem_size"] = df["N"]
+    df["problem_size"] = df["M"]
 
     # 排序
     df = df.sort_values("problem_size")
@@ -93,7 +93,7 @@ def main():
             )
 
     plt.xticks(list(x), [str(s) for s in sizes])
-    plt.xlabel("Problem Size (N)")
+    plt.xlabel("Matrx Size, M=N=K")
     plt.ylabel(ylabel)
     plt.title(
         f"AG+GEMM,  {ylabel} vs Problem Size"
