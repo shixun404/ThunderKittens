@@ -23,7 +23,7 @@ sources = {
     'cylon': {
         'source_files': {
             'h100': 'kernels/cylon/cylon.cu'
-        }
+        } 
     },
     'flux': {
         'source_files': {
