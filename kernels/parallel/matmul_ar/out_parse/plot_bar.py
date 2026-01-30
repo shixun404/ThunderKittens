@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import torch
 from pathlib import Path
 
 import pandas as pd
@@ -34,7 +35,7 @@ def main():
     green_blue = "#67BBBD"
     red = "#E67C7C"
 
-    colors = {"NCCL": purple, "PK":green}
+    colors = {"NCCL": purple, "Triton_dist": orange, "PK":green}
     comm_list = [1, 2, 4, 8, 16, 32, 64]
 
     df = df_[df_["num_comm_sms"].isin(comm_list)].copy()
@@ -58,16 +59,40 @@ def main():
         # 排序
         df = df.sort_values("problem_size")
 
-        impls = ["NCCL", "PK"]
+        impls = ["NCCL", "Triton_dist", "PK"]
         sizes = df["problem_size"].unique()
 
         # bar 布局
-        bar_width = 0.35
+        bar_width = 0.7 / len(impls)
         x = range(len(sizes))
 
-        plt.figure(figsize=(10, 5))
-
+        plt.figure(figsize=(10, 3))
+        triton_dist = torch.as_tensor([112.7146019602264, 843.3576379805432, 2111.3920370319915, 3729.1251552983854, 2752.7888320536376]) / 8
+        
+        
         for i, impl in enumerate(impls):
+            if impl == "Triton_dist":
+                plt.bar(
+                    [xi + (i - 0.5) * bar_width for xi in x],
+                    triton_dist,
+                    width=bar_width,
+                    label=impl,
+                    color=colors[impl]
+                )
+                xs = [xi + (i - 0.5) * bar_width for xi in x]
+                ys = triton_dist
+
+                for x_pos, y_val in zip(xs, ys):
+                    plt.text(
+                        x_pos,
+                        y_val,
+                        f"{int(y_val)}",
+                        ha="center",
+                        va="bottom",
+                        fontsize=9
+                    )
+                continue
+
             sub = df[df["impl"] == impl]
             sub = sub.set_index("problem_size").loc[sizes]
 
@@ -86,7 +111,7 @@ def main():
                 plt.text(
                     x_pos,
                     y_val,
-                    f"{y_val:.2f}",
+                    f"{int(y_val)}",
                     ha="center",
                     va="bottom",
                     fontsize=9
