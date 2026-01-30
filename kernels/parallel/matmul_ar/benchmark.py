@@ -251,8 +251,8 @@ def run(
     num_comm_sms: int,
     local_rank: int,
     local_world_size: int,
-    num_warmup_iters: int = 1,
-    num_iters: int = 5,
+    num_warmup_iters: int = 10,
+    num_iters: int = 50,
     check_correctness: bool = False,
     do_profile: bool = False
 ) -> None:
@@ -314,7 +314,7 @@ def run(
 if __name__ == "__main__":
     local_rank, local_world_size = init_distributed_environment()
 
-    for N in [2048]:
+    for N in [32768]:
         for num_comm_sms in [16]:
             run(N, N // local_world_size, N, num_comm_sms, local_rank, local_world_size, check_correctness=False, do_profile=False)
 
