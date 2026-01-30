@@ -315,7 +315,7 @@ if __name__ == "__main__":
     local_rank, local_world_size = init_distributed_environment()
 
     for N in [32768]:
-        for num_comm_sms in [16]:
+        for num_comm_sms in [32, 40, 48, 56]:
             run(N, N // local_world_size, N, num_comm_sms, local_rank, local_world_size, check_correctness=False, do_profile=False)
 
     destroy_distributed_environment()
