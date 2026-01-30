@@ -25,7 +25,7 @@ def nccl_matmul_all_reduce_func(
     C: torch.Tensor
 ) -> None:
     torch.matmul(A, B, out=C)
-    torch.distributed.all_reduce(C, op=torch.distributed.ReduceOp.SUM)
+    # torch.distributed.all_reduce(C, op=torch.distributed.ReduceOp.SUM)
 
 
 def tk_matmul_all_reduce_func(
@@ -172,15 +172,15 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--outdir", type=str, default="out_parse", help="where to write csv/png (rank0 only)")
     parser.add_argument("--prefix", type=str, default="tp_matmul", help="file prefix")
-    parser.add_argument("--warmup", type=int, default=1)
-    parser.add_argument("--iters", type=int, default=5)
+    parser.add_argument("--warmup", type=int, default=10)
+    parser.add_argument("--iters", type=int, default=100)
     parser.add_argument("--check", action="store_true")
     parser.add_argument("--profile", action="store_true")
     # 允许你从命令行覆盖 sweep
     # parser.add_argument("--Ns", type=str, default="2048,4096,8192,16384,32768")
     # parser.add_argument("--comm_sms", type=str, default="1,2,4,8,16,32,64")
     parser.add_argument("--Ns", type=str, default="32768")
-    parser.add_argument("--comm_sms", type=str, default="16")
+    parser.add_argument("--comm_sms", type=str, default="1")
     args = parser.parse_args()
 
     local_rank, local_world_size = init_distributed_environment()
@@ -194,11 +194,11 @@ if __name__ == "__main__":
         for num_comm_sms in comm_sms_list:
             run(N, N // local_world_size, N, num_comm_sms, 
                 local_rank, local_world_size, 
-                check_correctness=False, do_profile=False,
+                check_correctness=args.check, do_profile=False,
                 record_list_rank0=records_rank0)
             run(N, N, N // local_world_size, num_comm_sms, 
                 local_rank, local_world_size, 
-                check_correctness=False, do_profile=False,
+                check_correctness=args.check, do_profile=False,
                 record_list_rank0=records_rank0)
     torch.distributed.barrier()
     if local_rank == 0:
