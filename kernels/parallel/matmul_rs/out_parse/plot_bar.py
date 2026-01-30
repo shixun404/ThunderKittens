@@ -28,13 +28,16 @@ def main():
     metric_col = "tflops_mean" if args.metric == "tflops" else "ms_mean"
     ylabel = "Mean TFLOp/s" if args.metric == "tflops" else "Mean Latency (ms)"
     
+
+    impls = ["NCCL", "PK", "Triton-dist"]
+    
     orange = "#F29441"
     purple = "#9467BD"
     green = "#4EAE4E"
     green_blue = "#67BBBD"
     red = "#E67C7C"
 
-    colors = {"NCCL": purple, "PK":green}
+    colors = {"NCCL": purple, "PK":green, "Triton-dist":orange}
 
 
     if df.empty:
@@ -47,7 +50,6 @@ def main():
     # 排序
     df = df.sort_values("problem_size")
 
-    impls = ["NCCL", "PK"]
     sizes = df["problem_size"].unique()
     print(sizes, df)
 
