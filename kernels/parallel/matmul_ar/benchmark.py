@@ -180,7 +180,7 @@ if __name__ == "__main__":
     # parser.add_argument("--Ns", type=str, default="2048,4096,8192,16384,32768")
     # parser.add_argument("--comm_sms", type=str, default="1,2,4,8,16,32,64")
     parser.add_argument("--Ns", type=str, default="2048,4096,8192,16384,32768")
-    parser.add_argument("--comm_sms", type=str, default="1,2,4,8,16,32,64")
+    parser.add_argument("--comm_sms", type=str, default="0")
     args = parser.parse_args()
 
     local_rank, local_world_size = init_distributed_environment()
