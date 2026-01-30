@@ -1,6 +1,10 @@
 import sys, os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+
+import argparse
+from pathlib import Path
+
 import torch
 
 from common import (
@@ -46,7 +50,8 @@ def run(
     num_warmup_iters: int = 1,
     num_iters: int = 5,
     check_correctness: bool = False,
-    do_profile: bool = False
+    do_profile: bool = False,
+    record_list_rank0: list | None = None, 
 ) -> None:
     A_local = torch.randn(M // local_world_size, K, dtype=torch.bfloat16, device=f"cuda:{local_rank}") / K ** 0.25
     A_tk = TKParallelTensor(
@@ -104,12 +109,148 @@ def run(
     clean_print(f"NCCL: {nccl_avg_ms:.3f} ms | {nccl_tflops:.2f} TFLOp/s")
     clean_print(f"TK: {tk_avg_ms:.3f} ms | {tk_tflops:.2f} TFLOp/s")
 
+    payload = {
+        "rank": local_rank,
+        "world_size": local_world_size,
+        "M": M, "K": K, "N": N,
+        "num_comm_sms": num_comm_sms,
+        "nccl_ms": float(nccl_avg_ms),
+        "nccl_tflops": float(nccl_tflops),
+        "tk_ms": float(tk_avg_ms),
+        "tk_tflops": float(tk_tflops),
+    }
+
+    gathered = [None for _ in range(local_world_size)]
+    torch.distributed.all_gather_object(gathered, payload)
+
+    if local_rank == 0 and record_list_rank0 is not None:
+        record_list_rank0.extend(gathered)
+
+
+def _maybe_import_plot_deps():
+    # 只在 rank0 且需要导出时导入，避免每个 rank 都 import pandas/matplotlib
+    import pandas as pd  # noqa
+    import matplotlib.pyplot as plt  # noqa
+    return pd, plt
+def export_csv_and_plots(records: list, outdir: Path, prefix: str):
+    pd, plt = _maybe_import_plot_deps()
+    outdir.mkdir(parents=True, exist_ok=True)
+
+    # 展开为 long-form：每条记录变成两行（impl=TK/NCCL）
+    rows = []
+    for r in records:
+        rows.append({
+            "rank": r["rank"], "world_size": r["world_size"],
+            "M": r["M"], "K": r["K"], "N": r["N"], "num_comm_sms": r["num_comm_sms"],
+            "impl": "NCCL", "ms": r["nccl_ms"], "tflops": r["nccl_tflops"]
+        })
+        rows.append({
+            "rank": r["rank"], "world_size": r["world_size"],
+            "M": r["M"], "K": r["K"], "N": r["N"], "num_comm_sms": r["num_comm_sms"],
+            "impl": "TK", "ms": r["tk_ms"], "tflops": r["tk_tflops"]
+        })
+
+    df = pd.DataFrame(rows)
+    raw_csv = outdir / f"{prefix}_raw.csv"
+    df.to_csv(raw_csv, index=False)
+
+    # 聚合：按 (M,K,N,num_comm_sms,impl) 对 ranks 做统计
+    gcols = ["world_size", "M", "K", "N", "num_comm_sms", "impl"]
+    summ = df.groupby(gcols).agg(
+        ms_mean=("ms", "mean"),
+        ms_std=("ms", "std"),
+        ms_min=("ms", "min"),
+        ms_max=("ms", "max"),
+        tflops_mean=("tflops", "mean"),
+        tflops_std=("tflops", "std"),
+        tflops_min=("tflops", "min"),
+        tflops_max=("tflops", "max"),
+        ranks=("rank", "nunique"),
+    ).reset_index()
+
+    sum_csv = outdir / f"{prefix}_summary.csv"
+    summ.to_csv(sum_csv, index=False)
+
+    # 画图：每个 shape 两张图（ms / tflops）
+    shapes = summ[["M", "K", "N", "world_size"]].drop_duplicates().to_dict("records")
+    for s in shapes:
+        M, K, N, ws = s["M"], s["K"], s["N"], s["world_size"]
+        sub = summ[(summ["M"] == M) & (summ["K"] == K) & (summ["N"] == N) & (summ["world_size"] == ws)].copy()
+        sub = sub.sort_values(["num_comm_sms", "impl"])
+        shape_tag = f"M{M}_K{K}_N{N}_ws{ws}"
+
+        # TFLOPS
+        plt.figure()
+        for impl in sorted(sub["impl"].unique()):
+            s2 = sub[sub["impl"] == impl].sort_values("num_comm_sms")
+            plt.plot(s2["num_comm_sms"], s2["tflops_mean"], marker="o", label=impl)
+        plt.xlabel("num_comm_sms")
+        plt.ylabel("Mean TFLOp/s (across ranks)")
+        plt.title(f"BF16 AllGather+Matmul | {shape_tag} | TFLOp/s vs num_comm_sms")
+        plt.grid(True, linestyle="--", linewidth=0.5)
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig(outdir / f"{prefix}_{shape_tag}_tflops.png", dpi=200)
+        plt.close()
+
+        # MS
+        plt.figure()
+        for impl in sorted(sub["impl"].unique()):
+            s2 = sub[sub["impl"] == impl].sort_values("num_comm_sms")
+            plt.plot(s2["num_comm_sms"], s2["ms_mean"], marker="o", label=impl)
+        plt.xlabel("num_comm_sms")
+        plt.ylabel("Mean latency (ms, across ranks)")
+        plt.title(f"BF16 AllGather+Matmul | {shape_tag} | Latency vs num_comm_sms")
+        plt.grid(True, linestyle="--", linewidth=0.5)
+        plt.legend()
+        plt.tight_layout()
+        plt.savefig(outdir / f"{prefix}_{shape_tag}_ms.png", dpi=200)
+        plt.close()
+
+    print(f"[rank0] wrote: {raw_csv}")
+    print(f"[rank0] wrote: {sum_csv}")
+    print(f"[rank0] plots in: {outdir}")
+
 
 if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--outdir", type=str, default="out_parse", help="where to write csv/png (rank0 only)")
+    parser.add_argument("--prefix", type=str, default="tp_matmul", help="file prefix")
+    parser.add_argument("--warmup", type=int, default=1)
+    parser.add_argument("--iters", type=int, default=5)
+    parser.add_argument("--check", action="store_true")
+    parser.add_argument("--profile", action="store_true")
+    # 允许你从命令行覆盖 sweep
+    # parser.add_argument("--Ns", type=str, default="2048,4096,8192,16384,32768")
+    # parser.add_argument("--comm_sms", type=str, default="1,2,4,8,16,32,64")
+    parser.add_argument("--Ns", type=str, default="2048,4096,8192,16384,32768")
+    parser.add_argument("--comm_sms", type=str, default="1,2,4,8,16,32,64")
+    args = parser.parse_args()
+
     local_rank, local_world_size = init_distributed_environment()
 
-    for N in [2048, 4096, 8192, 16384, 32768]:
-        for num_comm_sms in [1, 2, 4, 8, 16, 32, 64]:
-            run(N, N, N // local_world_size, num_comm_sms, local_rank, local_world_size, check_correctness=False, do_profile=False)
+    records_rank0 = [] if local_rank == 0 else None
+
+    Ns = [int(x) for x in args.Ns.split(",") if x.strip()]
+    comm_sms_list = [int(x) for x in args.comm_sms.split(",") if x.strip()]
+  
+    for N in Ns:
+        for num_comm_sms in comm_sms_list:
+            # 你原来 run(N, N, N // world_size, ...) 的含义是：M=N, K=N, N_out=N/world_size
+            run(
+                N, N, N // local_world_size,
+                num_comm_sms,
+                local_rank, local_world_size,
+                num_warmup_iters=args.warmup,
+                num_iters=args.iters,
+                check_correctness=args.check,
+                do_profile=args.profile,
+                record_list_rank0=records_rank0
+            )
+
+    torch.distributed.barrier()
+    if local_rank == 0:
+        export_csv_and_plots(records_rank0, Path(args.outdir), args.prefix)
 
     destroy_distributed_environment()
