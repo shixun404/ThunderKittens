@@ -177,7 +177,8 @@ if __name__ == "__main__":
     local_rank, local_world_size = init_distributed_environment()
     records_rank0 = [] if local_rank == 0 else None
 
-    for N in [2048, 4096, 8192, 16384, 32768]:
+    # for N in [2048, 4096, 8192, 16384, 32768]:
+    for N in [2048,4096]:
         run(N, N // local_world_size, N,
             local_rank, local_world_size, 
             check_correctness=False, do_profile=False,
