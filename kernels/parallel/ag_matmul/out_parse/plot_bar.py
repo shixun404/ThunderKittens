@@ -28,11 +28,11 @@ def main():
     metric_col = "tflops_mean" if args.metric == "tflops" else "ms_mean"
     ylabel = "Mean TFLOp/s" if args.metric == "tflops" else "Mean Latency (ms)"
     
-    orange = "#F29441",
-    purple = "#9467BD",
-    green = "#4EAE4E",
-    green_blue = "#67BBBD",
-    red = "#E67C7C",
+    orange = "#F29441"
+    purple = "#9467BD"
+    green = "#4EAE4E"
+    green_blue = "#67BBBD"
+    red = "#E67C7C"
 
     colors = {"NCCL": purple, "PK":green}
     comm_list = [1, 2, 4, 8, 16, 32, 64]

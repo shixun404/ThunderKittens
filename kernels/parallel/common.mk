@@ -40,7 +40,7 @@ GPU ?= NOT_SET
 SRC ?= NOT_SET
 OUT ?= _C$(shell python3 -c "import sysconfig; print(sysconfig.get_config_var('EXT_SUFFIX'))")
 SCRIPT ?= benchmark.py
-RUN_CMD ?= OMP_NUM_THREADS=1 torchrun --nproc_per_node=8 $(SCRIPT)
+RUN_CMD ?= OMP_NUM_THREADS=1 torchrun --standalone --nproc_per_node=8 $(SCRIPT)
 
 ifeq ($(GPU),B200)
 NVCCFLAGS += -DKITTENS_HOPPER -DKITTENS_BLACKWELL -gencode arch=compute_100a,code=sm_100a

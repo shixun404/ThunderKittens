@@ -1,6 +1,10 @@
 import sys, os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+import argparse
+from pathlib import Path
+
+
 gpu = os.environ.get("GPU", "")
 assert gpu == "B200" or gpu == "H100", "GPU must be set to B200 or H100"
 
@@ -46,7 +50,8 @@ def run(
     num_warmup_iters: int = 1,
     num_iters: int = 5,
     check_correctness: bool = False,
-    do_profile: bool = False
+    do_profile: bool = False,
+    record_list_rank0: list | None = None, 
 ) -> None:
     A = torch.randn(M, K, dtype=torch.bfloat16, device=f"cuda:{local_rank}") / K ** 0.25
     if gpu == "H100":
@@ -103,13 +108,83 @@ def run(
     clean_print(f"===============================================================================", print_once=True)
     clean_print(f"<BF16 TP Matmul | world_size={local_world_size} | {M}x{K}x{N}>", print_once=True)
     clean_print(f"NCCL: {nccl_avg_ms:.3f} ms | {nccl_tflops:.2f} TFLOp/s")
-    clean_print(f"TK: {tk_avg_ms:.3f} ms | {tk_tflops:.2f} TFLOp/s")
+    clean_print(f"PK: {tk_avg_ms:.3f} ms | {tk_tflops:.2f} TFLOp/s")
+    payload = {
+        "rank": local_rank,
+        "world_size": local_world_size,
+        "M": M, "K": K, "N": N,
+        "nccl_ms": float(nccl_avg_ms),
+        "nccl_tflops": float(nccl_tflops),
+        "tk_ms": float(tk_avg_ms),
+        "tk_tflops": float(tk_tflops),
+    }
 
+    gathered = [None for _ in range(local_world_size)]
+    torch.distributed.all_gather_object(gathered, payload)
+
+    if local_rank == 0 and record_list_rank0 is not None:
+        record_list_rank0.extend(gathered)
+
+def _maybe_import_plot_deps():
+    # 只在 rank0 且需要导出时导入，避免每个 rank 都 import pandas/matplotlib
+    import pandas as pd  # noqa
+    import matplotlib.pyplot as plt  # noqa
+    return pd, plt
+def export_csv_and_plots(records: list, outdir: Path, prefix: str):
+    pd, plt = _maybe_import_plot_deps()
+    outdir.mkdir(parents=True, exist_ok=True)
+
+    # 展开为 long-form：每条记录变成两行（impl=TK/NCCL）
+    rows = []
+    for r in records:
+        rows.append({
+            "rank": r["rank"], "world_size": r["world_size"],
+            "M": r["M"], "K": r["K"], "N": r["N"],
+            "impl": "NCCL", "ms": r["nccl_ms"], "tflops": r["nccl_tflops"]
+        })
+        rows.append({
+            "rank": r["rank"], "world_size": r["world_size"],
+            "M": r["M"], "K": r["K"], "N": r["N"],
+            "impl": "PK", "ms": r["tk_ms"], "tflops": r["tk_tflops"]
+        })
+
+    df = pd.DataFrame(rows)
+    raw_csv = outdir / f"{prefix}_raw.csv"
+    df.to_csv(raw_csv, index=False)
+
+    # 聚合：按 (M,K,N,num_comm_sms,impl) 对 ranks 做统计
+    gcols = ["world_size", "M", "K", "N", "impl"]
+    summ = df.groupby(gcols).agg(
+        ms_mean=("ms", "mean"),
+        ms_std=("ms", "std"),
+        ms_min=("ms", "min"),
+        ms_max=("ms", "max"),
+        tflops_mean=("tflops", "mean"),
+        tflops_std=("tflops", "std"),
+        tflops_min=("tflops", "min"),
+        tflops_max=("tflops", "max"),
+        ranks=("rank", "nunique"),
+    ).reset_index()
+
+    sum_csv = outdir / f"{prefix}_summary.csv"
+    summ.to_csv(sum_csv, index=False)
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--outdir", type=str, default="out_parse", help="where to write csv/png (rank0 only)")
+    parser.add_argument("--prefix", type=str, default="tp_matmul", help="file prefix")
+    args = parser.parse_args()
     local_rank, local_world_size = init_distributed_environment()
+    records_rank0 = [] if local_rank == 0 else None
 
     for N in [2048, 4096, 8192, 16384, 32768]:
-        run(N, N // local_world_size, N, local_rank, local_world_size, check_correctness=False, do_profile=False)
+        run(N, N // local_world_size, N,
+            local_rank, local_world_size, 
+            check_correctness=False, do_profile=False,
+            record_list_rank0=records_rank0)
+    torch.distributed.barrier()
+    if local_rank == 0:
+        export_csv_and_plots(records_rank0, Path(args.outdir), args.prefix)
+
 
     destroy_distributed_environment()
