@@ -86,12 +86,22 @@ def main():
             plt.text(
                 x_pos,
                 y_val,
-                f"{y_val:.2f}",
+                f"{int(y_val)}",
                 ha="center",
                 va="bottom",
                 fontsize=9
             )
-
+            plt.text(
+                x_pos,
+                y_val + 60,
+                f"{int(100 * y_val / 989)}%",
+                ha="center",
+                va="bottom",
+                fontsize=9
+            )
+    roofline_x = [i - 0.5 for i in range(len(sizes) + 1)]
+    y = [989 for _ in roofline_x]
+    plt.plot(roofline_x, y, color="black", linestyle="--", label="Roofline")
     plt.xticks(list(x), [str(s) for s in sizes])
     plt.xlabel("Matrx Size, M=N=K")
     plt.ylabel(ylabel)
@@ -100,7 +110,7 @@ def main():
     )
     plt.legend()
     plt.grid(axis="y", linestyle="--", alpha=0.5)
-    plt.ylim([0, 850])
+    # plt.ylim([0, 850])
     plt.tight_layout()
     plt.savefig(f"bar_plot.png", dpi=200)
     plt.close()
